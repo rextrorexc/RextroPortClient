@@ -2,12 +2,15 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawn, execFileSync } = require('child_process');
+const { spawn } = require('child_process');
 const R = require('./rules');
+const Z = require('./zip');
 
 const PORT = process.env.PORT || 3000;
 const WORK = path.join(__dirname, 'work');
-const JAVA21 = '/usr/lib/jvm/java-21-openjdk';
+const WIN = process.platform === 'win32';
+// JDK 21 for the optional build: JAVA_HOME if set, else the usual Linux path, else whatever `java` is on PATH.
+const JAVA21 = process.env.JAVA_HOME || (fs.existsSync('/usr/lib/jvm/java-21-openjdk') ? '/usr/lib/jvm/java-21-openjdk' : '');
 fs.mkdirSync(WORK, { recursive: true });
 const jobs = {};
 
@@ -270,7 +273,11 @@ function runBuild(job) {
   fs.chmodSync(path.join(tmp, 'gradlew'), 0o755);
   job.building = true;
   emit(job, { type: 'log', msg: 'Derleniyor (JDK 21, gradlew build -x test)…' });
-  const p = spawn('./gradlew', ['build', '-x', 'test', '--console=plain', '--no-daemon'], { cwd: tmp, env: { ...process.env, JAVA_HOME: JAVA21, PATH: `${JAVA21}/bin:${process.env.PATH}` } });
+  const env = { ...process.env };
+  if (JAVA21) { env.JAVA_HOME = JAVA21; env.PATH = `${path.join(JAVA21, 'bin')}${path.delimiter}${env.PATH}`; }
+  const p = WIN
+    ? spawn('cmd.exe', ['/c', 'gradlew.bat', 'build', '-x', 'test', '--console=plain', '--no-daemon'], { cwd: tmp, env })
+    : spawn('./gradlew', ['build', '-x', 'test', '--console=plain', '--no-daemon'], { cwd: tmp, env });
   const errs = [];
   const feed = d => d.toString().split('\n').filter(Boolean).forEach(l => { if (/error:|FAILED|What went wrong|Could not|Unsupported/.test(l)) errs.push(l); emit(job, { type: 'build', msg: l }); });
   p.stdout.on('data', feed); p.stderr.on('data', feed);
@@ -302,8 +309,8 @@ http.createServer(async (req, res) => {
       fs.mkdirSync(src, { recursive: true });
       fs.writeFileSync(path.join(dir, 'in.zip'), body);
       let ex;
-      try { ex = JSON.parse(execFileSync('python3', ['-I', path.join(__dirname, 'extract.py'), path.join(dir, 'in.zip'), src], { maxBuffer: 1 << 26 }).toString()); }
-      catch (e) { throw new Error('zip açılamadı: ' + (e.stderr ? e.stderr.toString().split('\n').filter(Boolean).pop() : e.message)); }
+      try { ex = Z.extract(path.join(dir, 'in.zip'), src); }
+      catch (e) { throw new Error('zip açılamadı: ' + e.message); }
       const files = walk(src);
       const job = jobs[id] = { id, dir, src, events: [], clients: [], kinds: detect(files) };
       job.extract = ex;
@@ -332,7 +339,7 @@ http.createServer(async (req, res) => {
       if (m[2] === 'download') {
         if (!job.ported) return send(res, 409, { error: 'not ported' });
         const zip = path.join(job.dir, `ported-${job.target}.zip`);
-        execFileSync('python3', ['-I', '-c', 'import shutil,sys;shutil.make_archive(sys.argv[1][:-4],"zip",sys.argv[2])', zip, path.join(job.dir, 'out')]);
+        Z.create(zip, path.join(job.dir, 'out'));
         res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename="ported-${job.target}.zip"` });
         return fs.createReadStream(zip).pipe(res);
       }

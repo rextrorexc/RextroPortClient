@@ -7,11 +7,20 @@ original and ported code show side by side, and the result downloads as a `.zip`
 
 ## Run
 
-Requirements: Node.js, Python 3, JDK 21 (only for the optional build step).
+No install needed on Windows: `start.bat` uses Node.js if present, otherwise downloads a portable copy
+(one time, into `runtime/`). No Python required.
+
+```bat
+start.bat
+```
+
+Linux / macOS (needs Node.js 22+):
 
 ```bash
 ./start.sh
 ```
+
+JDK 21 is only needed for the optional **Derle** build step.
 
 Opens on `http://localhost:3917` (next free port if taken).
 
