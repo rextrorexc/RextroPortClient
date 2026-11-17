@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rextro Port</title>
+<style>
+:root{--fg:#1f2a2e;--mut:#5d6b70;--glass:rgba(255,255,255,.55);--edge:rgba(255,255,255,.7);--ac:#2f7f79;--warn:#b7791f;--chg:#2b6cb0}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--fg);font:15px/1.5 "Segoe UI",system-ui,sans-serif;overflow:hidden;
+ background:linear-gradient(135deg,#e7efe9,#dfe9ee 55%,#efe9df)}
+.bg i{position:fixed;border-radius:50%;filter:blur(70px);opacity:.55;z-index:0;animation:drift 18s ease-in-out infinite alternate}
+.bg i:nth-child(1){width:420px;height:420px;background:#a8d5cf;left:-80px;top:-60px}
+.bg i:nth-child(2){width:360px;height:360px;background:#f0d9b5;right:-60px;bottom:-40px;animation-delay:-6s}
+.bg i:nth-child(3){width:300px;height:300px;background:#b9cbe6;right:25%;top:10%;animation-delay:-11s}
+@keyframes drift{to{transform:translate(50px,40px) scale(1.12)}}
+.glass{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--edge);box-shadow:0 10px 40px rgba(40,60,70,.08);border-radius:20px}
+.page{position:relative;z-index:1;height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;transition:opacity .5s,transform .5s}
+.page.hide{opacity:0;transform:scale(.97);pointer-events:none;position:absolute;inset:0}
+/* step 1 */
+#drop{width:min(520px,100%);padding:56px 32px;text-align:center;cursor:pointer;transition:transform .3s,background .3s;animation:rise .8s ease both}
+#drop:hover,#drop.over{transform:translateY(-4px);background:rgba(255,255,255,.75)}
+#drop h1{margin:0 0 8px;font-size:22px;font-weight:600;letter-spacing:.2px}
+#drop p{margin:0;color:var(--mut)}
+.ring{width:64px;height:64px;margin:0 auto 22px;border-radius:50%;border:2px solid var(--ac);display:grid;place-items:center;color:var(--ac);font-size:26px;animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.08);box-shadow:0 0 0 14px rgba(47,127,121,.08)}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+/* step 2 */
+#work{flex-direction:column;gap:14px;align-items:stretch;max-width:1100px;margin:0 auto}
+.bar{padding:12px 16px;display:flex;gap:12px;align-items:center;animation:rise .6s ease both}
+.bar b{font-weight:600}.bar .sp{flex:1}
+select,button{font:inherit;color:var(--fg);background:rgba(255,255,255,.7);border:1px solid var(--edge);border-radius:12px;padding:8px 16px;transition:transform .2s,background .2s}
+button{cursor:pointer}button:hover:not(:disabled){transform:translateY(-1px);background:#fff}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button.p:hover:not(:disabled){background:#276b66}button:disabled{opacity:.45;cursor:default}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:300px 1fr;gap:14px;animation:rise .8s .1s ease both}
+#tree{overflow:auto;padding:10px;font:12.5px ui-monospace,monospace}
+.f{display:flex;gap:8px;padding:3px 8px;border-radius:8px;cursor:pointer;white-space:nowrap;animation:rise .4s ease both}
+.f:hover{background:rgba(255,255,255,.6)}.f.sel{background:rgba(255,255,255,.9)}
+.d{width:8px;height:8px;border-radius:50%;background:#c3cdd0;margin-top:6px;flex:none;transition:background .4s}
+.working .d{background:var(--ac);animation:blink .6s infinite alternate}.ok .d{background:#6bbf8a}.changed .d{background:var(--chg)}.review .d{background:var(--warn)}
+@keyframes blink{to{opacity:.2}}
+.right{display:flex;flex-direction:column;gap:14px;min-height:0}
+#view{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;overflow:hidden}
+#view>div{overflow:auto;min-width:0}#view>div+div{border-left:1px solid var(--edge)}
+#view h4{margin:0;padding:8px 14px;font-weight:500;color:var(--mut);position:sticky;top:0;background:rgba(255,255,255,.6);backdrop-filter:blur(8px)}
+pre{margin:0;padding:6px 14px 14px;font:12px/1.55 ui-monospace,monospace}
+#log{height:110px;overflow:auto;padding:10px 16px;font:12px/1.6 ui-monospace,monospace;color:var(--mut)}#log .w{color:var(--warn)}
+@media(max-width:800px){.body{grid-template-columns:1fr}#view{grid-template-columns:1fr}}
+</style></head><body>
+<div class="bg"><i></i><i></i><i></i></div>
+
+<div class="page" id="p1">
+ <div class="glass" id="drop"><div class="ring">↓</div><h1>Sürükle</h1><p>client .zip dosyasını buraya bırak</p><input type="file" id="pick" accept=".zip" hidden></div>
+</div>
+
+<div class="page hide" id="work">
+ <div class="glass bar"><b id="name">Client</b><span id="info" style="color:var(--mut)"></span><span class="sp"></span>
+  <select id="ver"></select><button id="go" class="p">Port et</button><button id="build" hidden>Derle</button><a id="dl" hidden><button>İndir</button></a></div>
+ <div class="body">
+  <div class="glass" id="tree"></div>
+  <div class="right"><div class="glass" id="view"><div><h4>Orijinal</h4><pre id="a"></pre></div><div><h4>Port edilmiş</h4><pre id="b"></pre></div></div>
+   <div class="glass" id="log"></div></div>
+ </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);let job=null,sel=null;
+fetch('/api/versions').then(r=>r.json()).then(v=>{$('ver').innerHTML=v.map(x=>`<option>${x.mc}</option>`).join('');$('ver').value='1.20.1'});
+const log=(m,c='')=>{const d=document.createElement('div');d.className=c;d.textContent=m;$('log').append(d);$('log').scrollTop=1e9};
+const drop=$('drop');drop.onclick=()=>$('pick').click();$('pick').onchange=e=>up(e.target.files[0]);
+['dragover','dragenter'].forEach(t=>addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+addEventListener('dragleave',e=>{if(!e.relatedTarget)drop.classList.remove('over')});
+addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');up(e.dataTransfer.files[0])});
+async function up(f){if(!f)return;$('drop').querySelector('p').textContent='Yükleniyor…';
+ const r=await fetch('/api/upload',{method:'POST',body:f});const j=await r.json();
+ if(j.error){$('drop').querySelector('p').textContent='Hata: '+j.error;return}
+ job=j.id;$('name').textContent=f.name.replace(/\.zip$/i,'');$('info').textContent=j.kinds.join(', ')+' · '+j.files.length+' dosya';
+ (j.skipped||[]).forEach(s=>log(`ATLANDI ${s.name}: ${s.why}`,'w'));log(`Zip: ${j.entries} kayıt, ${j.files.length} dosya açıldı`);
+ $('tree').innerHTML='';j.files.sort().forEach((p,i)=>{const d=document.createElement('div');d.className='f';d.style.animationDelay=Math.min(i*12,600)+'ms';d.dataset.p=p;d.innerHTML='<i class="d"></i>'+p;d.onclick=()=>show(p);$('tree').append(d)});
+ $('p1').classList.add('hide');setTimeout(()=>$('work').classList.remove('hide'),350);
+ new EventSource(`/api/jobs/${job}/events`).onmessage=e=>ev(JSON.parse(e.data));}
+function ev(e){
+ if(e.type==='log')log(e.msg);else if(e.type==='build')log(e.msg);else if(e.type==='built'){$('build').disabled=false}else if(e.type==='error')log(e.msg,'w');
+ else if(e.type==='file'){const d=document.querySelector(`[data-p="${CSS.escape(e.path)}"]`);if(!d)return;d.className='f '+e.status+(d===sel?' sel':'');
+  if(e.status==='working')d.scrollIntoView({block:'nearest'});
+  [...(e.flags||[]),...(e.skipped||[])].forEach(f=>log(`${e.path}:${f.line} ${f.note}`,'w'))}
+ else if(e.type==='done'){log(`Bitti: ${e.totals.changed} dosya değişti, ${e.totals.flags} incelenecek, ${e.totals.skipped} korunan satır`);$('go').disabled=false;$('dl').hidden=false;$('build').hidden=false;$('dl').href=`/api/jobs/${job}/download`}}
+$('go').onclick=async()=>{$('go').disabled=true;$('dl').hidden=true;$('log').innerHTML='';
+ document.querySelectorAll('.f').forEach(d=>d.className='f');await fetch(`/api/jobs/${job}/port`,{method:'POST',body:JSON.stringify({version:$('ver').value})})};
+$('build').onclick=()=>{$('build').disabled=true;fetch(`/api/jobs/${job}/build`,{method:'POST'})};
+async function show(p){document.querySelectorAll('.f').forEach(d=>d.classList.toggle('sel',d.dataset.p===p));sel=document.querySelector(`[data-p="${CSS.escape(p)}"]`);
+ const t=v=>fetch(`/api/jobs/${job}/file?path=${encodeURIComponent(p)}&v=${v}`).then(r=>r.text());
+ $('a').textContent=await t('src');$('b').textContent=await t('out')}
+</script></body></html>
